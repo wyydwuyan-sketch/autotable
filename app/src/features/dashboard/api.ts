@@ -8,6 +8,22 @@ const DEFAULT_API_BASE_URL =
 const API_BASE_URL = import.meta.env.VITE_GRID_API_BASE_URL ?? DEFAULT_API_BASE_URL
 
 type RequestError = Error & { status?: number }
+type ErrorBody = { detail?: string | Array<{ loc?: Array<string | number>; msg?: string }> }
+
+const buildRequestErrorMessage = (status: number, body: ErrorBody) => {
+  if (typeof body.detail === 'string' && body.detail.trim()) {
+    return body.detail
+  }
+  if (Array.isArray(body.detail) && body.detail.length > 0) {
+    return body.detail
+      .map((item) => {
+        const path = Array.isArray(item.loc) ? item.loc.join('.') : 'request'
+        return `${path}: ${item.msg ?? '参数不合法'}`
+      })
+      .join('; ')
+  }
+  return `请求失败 (${status})`
+}
 
 async function requestJson<T>(path: string, init?: RequestInit, allowRetry = true): Promise<T> {
   const token = useAuthStore.getState().accessToken
@@ -36,10 +52,8 @@ async function requestJson<T>(path: string, init?: RequestInit, allowRetry = tru
     }
     let detail = `请求失败 (${response.status})`
     try {
-      const body = (await response.json()) as { detail?: string }
-      if (body?.detail) {
-        detail = body.detail
-      }
+      const body = (await response.json()) as ErrorBody
+      detail = buildRequestErrorMessage(response.status, body)
     } catch {
       // keep fallback message
     }

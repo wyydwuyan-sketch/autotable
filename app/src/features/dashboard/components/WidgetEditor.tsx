@@ -1,4 +1,4 @@
-import { Alert, Button, Form, Input, Modal, Radio, Select, Skeleton, Steps } from 'antd'
+import { Alert, Button, Form, Input, Modal, Radio, Select, Skeleton, Steps, message } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { gridApiClient } from '../../grid/api'
 import type { Field } from '../../grid/types/grid'
@@ -34,6 +34,7 @@ export function WidgetEditor({ open, widget, defaultTableId, onClose }: Props) {
   const [step, setStep] = useState(0)
   const [fields, setFields] = useState<Field[]>([])
   const [fieldsLoading, setFieldsLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
   const addWidget = useDashboardStore((state) => state.addWidget)
   const updateWidget = useDashboardStore((state) => state.updateWidget)
 
@@ -114,29 +115,51 @@ export function WidgetEditor({ open, widget, defaultTableId, onClose }: Props) {
   }
 
   const handleSave = async () => {
-    const values = await form.validateFields()
-    if (isEdit && widget) {
-      await updateWidget(widget.id, {
-        title: values.title,
-        tableId: values.tableId,
-        fieldIds: values.fieldIds ?? [],
-        aggregation: values.aggregation,
-        groupFieldId: values.groupFieldId ?? null,
+    try {
+      setSaving(true)
+      await form.validateFields(['title'])
+      const rawValues = form.getFieldsValue(true) as Partial<FormValues>
+      const widgetType = rawValues.type ?? widget?.type ?? 'metric'
+      const widgetTableId = rawValues.tableId ?? widget?.tableId ?? defaultTableId
+      const aggregation = rawValues.aggregation ?? widget?.aggregation ?? 'count'
+      const title = (rawValues.title ?? '').trim() || typeLabelMap[widgetType]
+      const fieldIds = Array.isArray(rawValues.fieldIds) ? rawValues.fieldIds : widget?.fieldIds ?? []
+      const groupFieldId = rawValues.groupFieldId ?? widget?.groupFieldId ?? null
+
+      if (!widgetTableId) {
+        message.error('请选择数据表后再保存。')
+        return
+      }
+
+      if (isEdit && widget) {
+        await updateWidget(widget.id, {
+          title,
+          tableId: widgetTableId,
+          fieldIds,
+          aggregation,
+          groupFieldId,
+        })
+        onClose()
+        return
+      }
+
+      await addWidget({
+        type: widgetType,
+        title,
+        tableId: widgetTableId,
+        fieldIds,
+        aggregation,
+        groupFieldId,
+        layout: { x: 0, y: 999, w: 4, h: 3 },
+        config: {},
       })
       onClose()
-      return
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : '保存组件失败，请稍后重试'
+      message.error(detail)
+    } finally {
+      setSaving(false)
     }
-    await addWidget({
-      type: values.type,
-      title: values.title || typeLabelMap[values.type],
-      tableId: values.tableId,
-      fieldIds: values.fieldIds ?? [],
-      aggregation: values.aggregation,
-      groupFieldId: values.groupFieldId ?? null,
-      layout: { x: 0, y: 999, w: 4, h: 3 },
-      config: {},
-    })
-    onClose()
   }
 
   const closeAndReset = () => {
@@ -160,7 +183,7 @@ export function WidgetEditor({ open, widget, defaultTableId, onClose }: Props) {
         style={{ marginBottom: 24 }}
       />
 
-      <Form form={form} layout="vertical">
+      <Form form={form} layout="vertical" preserve>
         {step === 0 ? (
           <Form.Item name="type" label="组件类型" rules={[{ required: true, message: '请选择组件类型' }]}>
             <Radio.Group optionType="button" buttonStyle="solid">
@@ -233,7 +256,7 @@ export function WidgetEditor({ open, widget, defaultTableId, onClose }: Props) {
             下一步
           </Button>
         ) : (
-          <Button type="primary" onClick={() => void handleSave()}>
+          <Button type="primary" onClick={() => void handleSave()} loading={saving}>
             保存
           </Button>
         )}
@@ -241,4 +264,3 @@ export function WidgetEditor({ open, widget, defaultTableId, onClose }: Props) {
     </Modal>
   )
 }
-
