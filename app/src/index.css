@@ -1,4 +1,6 @@
 :root {
+  color-scheme: light;
+
   /* Modern Palette (Tailwind-ish Slate) */
   --bg-app: #f8fafc;        /* slate-50 */
   --bg-panel: #ffffff;      /* white */
@@ -23,6 +25,8 @@
   --row-h: 40px;            /* Taller rows for comfort */
   --row-num-w: 56px;
   --row-num-bg: #f8fafc;
+  --row-selected-bg: #fef2f2;
+  --cell-hover-bg: rgba(0, 0, 0, 0.01);
 
   /* UI Tokens */
   --radius: 8px;
@@ -33,6 +37,35 @@
 
   /* Transitions */
   --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg-app: #0b1220;
+  --bg-panel: #111827;
+  --bg-sidebar: #0f172a;
+  --bg-header: #111827;
+  --bg-hover: rgba(148, 163, 184, 0.12);
+  --bg-active: rgba(148, 163, 184, 0.2);
+
+  --border-color: #334155;
+  --border-strong: #475569;
+
+  --text-main: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+
+  --primary: #60a5fa;
+  --primary-hover: #3b82f6;
+  --primary-bg: rgba(96, 165, 250, 0.18);
+
+  --row-num-bg: #1e293b;
+  --row-selected-bg: rgba(248, 113, 113, 0.18);
+  --cell-hover-bg: rgba(148, 163, 184, 0.08);
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow: 0 8px 16px 0 rgb(0 0 0 / 0.35), 0 2px 8px -1px rgb(0 0 0 / 0.28);
 }
 
 * {
@@ -52,6 +85,7 @@ body {
   background: var(--bg-app);
   margin: 0;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* App Shell Layout */
@@ -115,7 +149,7 @@ body {
 
 .header-search:hover {
   border-color: var(--border-strong);
-  background: white;
+  background: var(--bg-panel);
 }
 
 .avatar {
@@ -193,7 +227,7 @@ body {
 }
 
 .sidebar-item.active {
-  background: white;
+  background: var(--bg-panel);
   color: var(--primary);
   box-shadow: var(--shadow-sm);
   font-weight: 500;
@@ -319,7 +353,7 @@ body {
 /* Filter Bar */
 .filter-bar {
   border: 1px solid var(--border-color);
-  background: #fff;
+  background: var(--bg-panel);
   border-radius: var(--radius);
   padding: 8px 12px;
   font-size: 13px;
@@ -356,7 +390,7 @@ body {
 /* Grid Container */
 .grid-root {
   flex: 1;
-  background: white;
+  background: var(--bg-panel);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   box-shadow: var(--shadow);
@@ -489,7 +523,7 @@ body {
 }
 
 .grid-header-cell.grid-header-cell-frozen {
-  background: #fff;
+  background: var(--bg-header);
 }
 
 .grid-header-text {
@@ -624,7 +658,7 @@ body {
   display: flex;
   align-items: stretch;
   border-bottom: 1px solid var(--border-color);
-  background: white;
+  background: var(--bg-panel);
 }
 
 .grid-row:hover {
@@ -632,7 +666,7 @@ body {
 }
 
 .grid-row.row-selected {
-  background: #fef2f2;
+  background: var(--row-selected-bg);
 }
 
 .grid-rownum {
@@ -691,7 +725,7 @@ body {
 
 .grid-rownum-icon-btn {
   border: 1px solid var(--border-color);
-  background: white;
+  background: var(--bg-panel);
   color: var(--text-secondary);
   width: 26px;
   height: 26px;
@@ -768,22 +802,22 @@ body {
 }
 
 .grid-cell:hover {
-  background-color: rgba(0,0,0,0.01);
+  background-color: var(--cell-hover-bg);
 }
 
 .grid-cell.editable:hover {
   box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.35);
-  background: #fff;
+  background: var(--bg-panel);
 }
 
 .grid-cell.focused {
   z-index: 2;
   box-shadow: inset 0 0 0 2px var(--primary);
-  background: white;
+  background: var(--bg-panel);
 }
 
 .grid-cell.editing {
-  background: #fff;
+  background: var(--bg-panel);
 }
 
 .grid-cell.grid-cell-frozen {
@@ -988,7 +1022,7 @@ body {
   font-size: 14px;
   outline: none;
   color: var(--text-main);
-  background: white;
+  background: var(--bg-panel);
   transition: var(--transition);
 }
 .form-input:focus, .form-select:focus {
@@ -1009,7 +1043,7 @@ body {
 .form-card {
   width: 100%;
   max-width: 640px;
-  background: white;
+  background: var(--bg-panel);
   border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   overflow: hidden;
@@ -1062,7 +1096,7 @@ body {
 .form-success-card {
   text-align: center;
   padding: 60px 40px;
-  background: white;
+  background: var(--bg-panel);
   border-radius: 12px;
   box-shadow: var(--shadow);
   display: flex;

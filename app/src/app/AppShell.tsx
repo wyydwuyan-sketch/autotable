@@ -2,13 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
-import { Avatar, Button, Checkbox, Input, Layout, Menu, Popover, Select, Space, Tag, Typography, message } from 'antd'
+import { Avatar, Button, Checkbox, ConfigProvider, Input, Layout, Menu, Popover, Select, Space, Tag, Typography, message, theme as antdTheme } from 'antd'
 import type { MenuProps } from 'antd'
 import {
   AppstoreOutlined,
   BarsOutlined,
   DeleteOutlined,
   DownloadOutlined,
+  MoonOutlined,
   FilterOutlined,
   FormOutlined,
   FundProjectionScreenOutlined,
@@ -17,6 +18,7 @@ import {
   PlusOutlined,
   SettingOutlined,
   SortAscendingOutlined,
+  SunOutlined,
   TableOutlined,
   TeamOutlined,
 } from '@ant-design/icons'
@@ -49,10 +51,26 @@ type ShareQuery = {
   sorts: SortCondition[]
 }
 
+type ThemeMode = 'light' | 'dark'
+
+const THEME_STORAGE_KEY = 'app_theme_mode'
+
+const resolveInitialTheme = (): ThemeMode => {
+  if (typeof window === 'undefined') {
+    return 'light'
+  }
+  const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY)
+  if (storedTheme === 'dark' || storedTheme === 'light') {
+    return storedTheme
+  }
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
 export function AppShell() {
   const navigate = useNavigate()
   const location = useLocation()
   const { baseId = 'base_1', tableId = 'tbl_1', viewId = 'viw_1' } = useParams()
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => resolveInitialTheme())
   const {
     fields,
     pageRecordCount,
@@ -111,6 +129,22 @@ export function AppShell() {
       roleKey: state.roleKey,
     })),
   )
+  const isDarkMode = themeMode === 'dark'
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', themeMode)
+    window.localStorage.setItem(THEME_STORAGE_KEY, themeMode)
+  }, [themeMode])
+
+  const antdThemeConfig = useMemo(
+    () => ({
+      algorithm: isDarkMode ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+    }),
+    [isDarkMode],
+  )
+  const toggleThemeMode = useCallback(() => {
+    setThemeMode((current) => (current === 'dark' ? 'light' : 'dark'))
+  }, [])
 
   const isViewManageRoute = location.pathname.includes('/config/views')
   const isComponentsRoute = location.pathname.includes('/config/components')
@@ -483,108 +517,120 @@ export function AppShell() {
   )
 
   return (
-    <div className="app-shell">
-      <input
-        type="file"
-        ref={fileInputRef}
-        style={{ display: 'none' }}
-        accept=".xlsx,.xls,.csv"
-        onChange={handleFileChange}
-      />
-      <Layout style={{ height: '100vh', background: 'var(--bg-app)' }}>
-        <Header
-          style={{
-            background: '#fff',
-            borderBottom: '1px solid var(--border-color)',
-            padding: '0 16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <Space>
-            <Typography.Title level={5} style={{ margin: 0 }}>
-              我的多维表格
-            </Typography.Title>
-            <Typography.Text type="secondary">/ {currentTenant?.name ?? '工作区'}</Typography.Text>
-          </Space>
-          <Space>
-            <Input.Search placeholder="搜索（开发中）" style={{ width: 240 }} />
-            <Button icon={<FundProjectionScreenOutlined />} onClick={() => navigate('/dashboard')}>
-              大屏
-            </Button>
-            <Select
-              style={{ width: 180 }}
-              value={currentTenant?.id}
-              placeholder="选择租户"
-              options={tenants.map((item) => ({ value: item.id, label: item.name }))}
-              onChange={(nextTenantId) => {
-                void (async () => {
-                  await switchTenant(nextTenantId)
-                  navigate('/b/base_1/t/tbl_1/v/viw_1')
-                })()
-              }}
-            />
-            <Typography.Text type="secondary">{user?.username ?? '未登录'}</Typography.Text>
-            <Avatar size="small">{(user?.username ?? 'U').slice(0, 1).toUpperCase()}</Avatar>
-            <Button onClick={() => void logout()}>退出</Button>
-          </Space>
-        </Header>
-
-        <Layout>
-          <Sider width={252} theme="light" style={{ borderRight: '1px solid var(--border-color)', overflowY: 'auto' }}>
-            <div style={{ padding: 12 }}>
-              <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 6, fontSize: 12 }}>
-                数据表
-              </Typography.Text>
-              <Menu
-                mode="inline"
-                selectedKeys={[`table:${tableId}`]}
-                items={tableMenuItems}
-                onClick={({ key }) => {
-                  const id = String(key).replace('table:', '')
-                  const targetViews = menuViewSource
-                    .filter((item) => item.tableId === id && item.config.isEnabled !== false)
-                    .sort((a, b) => (a.config.order ?? 0) - (b.config.order ?? 0))
-                  const target = targetViews.find((item) => item.id === viewId) ?? targetViews[0]
-                  if (!target) {
-                    navigate(`/b/${baseId}/t/${id}/v/viw_1`)
-                    return
-                  }
-                  navigate(buildViewPath(baseId, id, target))
+    <ConfigProvider theme={antdThemeConfig}>
+      <div className="app-shell">
+        <input
+          type="file"
+          ref={fileInputRef}
+          style={{ display: 'none' }}
+          accept=".xlsx,.xls,.csv"
+          onChange={handleFileChange}
+        />
+        <Layout style={{ height: '100vh', background: 'var(--bg-app)' }}>
+          <Header
+            style={{
+              background: 'var(--bg-header)',
+              borderBottom: '1px solid var(--border-color)',
+              padding: '0 16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <Space>
+              <Typography.Title level={5} style={{ margin: 0 }}>
+                我的多维表格
+              </Typography.Title>
+              <Typography.Text type="secondary">/ {currentTenant?.name ?? '工作区'}</Typography.Text>
+            </Space>
+            <Space>
+              <Input.Search placeholder="搜索（开发中）" style={{ width: 240 }} />
+              <Button icon={<FundProjectionScreenOutlined />} onClick={() => navigate('/dashboard')}>
+                大屏
+              </Button>
+              <Button
+                icon={isDarkMode ? <SunOutlined /> : <MoonOutlined />}
+                onClick={toggleThemeMode}
+                aria-label="切换亮暗主题"
+              >
+                {isDarkMode ? '亮色' : '暗色'}
+              </Button>
+              <Select
+                style={{ width: 180 }}
+                value={currentTenant?.id}
+                placeholder="选择租户"
+                options={tenants.map((item) => ({ value: item.id, label: item.name }))}
+                onChange={(nextTenantId) => {
+                  void (async () => {
+                    await switchTenant(nextTenantId)
+                    navigate('/b/base_1/t/tbl_1/v/viw_1')
+                  })()
                 }}
               />
-            </div>
+              <Typography.Text type="secondary">{user?.username ?? '未登录'}</Typography.Text>
+              <Avatar size="small">{(user?.username ?? 'U').slice(0, 1).toUpperCase()}</Avatar>
+              <Button onClick={() => void logout()}>退出</Button>
+            </Space>
+          </Header>
 
-            <div style={{ padding: 12, paddingTop: 0 }}>
-              <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 6, fontSize: 12 }}>
-                视图
-              </Typography.Text>
-              <Menu
-                mode="inline"
-                selectedKeys={[`view:${viewId}`]}
-                items={viewMenuItems}
-                onClick={({ key }) => openView(String(key).replace('view:', ''))}
-              />
-            </div>
-
-            {canViewBusinessConfig ? (
-              <div style={{ padding: 12, paddingTop: 0 }}>
+          <Layout>
+            <Sider
+              width={252}
+              theme={isDarkMode ? 'dark' : 'light'}
+              style={{ borderRight: '1px solid var(--border-color)', overflowY: 'auto', background: 'var(--bg-sidebar)' }}
+            >
+              <div style={{ padding: 12 }}>
                 <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 6, fontSize: 12 }}>
-                  业务配置
+                  数据表
                 </Typography.Text>
                 <Menu
                   mode="inline"
-                  selectedKeys={[isViewManageRoute ? 'config:views' : isComponentsRoute ? 'config:components' : isDashboardConfigRoute ? 'config:dashboard' : isAiModelsRoute ? 'config:ai-models' : isMembersRoute ? 'config:members' : '']}
-                  items={configMenuItems}
-                  onClick={({ key }) => openConfigRoute(String(key))}
+                  selectedKeys={[`table:${tableId}`]}
+                  items={tableMenuItems}
+                  onClick={({ key }) => {
+                    const id = String(key).replace('table:', '')
+                    const targetViews = menuViewSource
+                      .filter((item) => item.tableId === id && item.config.isEnabled !== false)
+                      .sort((a, b) => (a.config.order ?? 0) - (b.config.order ?? 0))
+                    const target = targetViews.find((item) => item.id === viewId) ?? targetViews[0]
+                    if (!target) {
+                      navigate(`/b/${baseId}/t/${id}/v/viw_1`)
+                      return
+                    }
+                    navigate(buildViewPath(baseId, id, target))
+                  }}
                 />
               </div>
-            ) : null}
-          </Sider>
 
-          <Content style={{ padding: 0, overflow: 'hidden', display: 'flex' }}>
-            <div className="main-panel" style={{ height: '100%', padding: isConfigLikeRoute ? 16 : 20 }}>
+              <div style={{ padding: 12, paddingTop: 0 }}>
+                <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 6, fontSize: 12 }}>
+                  视图
+                </Typography.Text>
+                <Menu
+                  mode="inline"
+                  selectedKeys={[`view:${viewId}`]}
+                  items={viewMenuItems}
+                  onClick={({ key }) => openView(String(key).replace('view:', ''))}
+                />
+              </div>
+
+              {canViewBusinessConfig ? (
+                <div style={{ padding: 12, paddingTop: 0 }}>
+                  <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 6, fontSize: 12 }}>
+                    业务配置
+                  </Typography.Text>
+                  <Menu
+                    mode="inline"
+                    selectedKeys={[isViewManageRoute ? 'config:views' : isComponentsRoute ? 'config:components' : isDashboardConfigRoute ? 'config:dashboard' : isAiModelsRoute ? 'config:ai-models' : isMembersRoute ? 'config:members' : '']}
+                    items={configMenuItems}
+                    onClick={({ key }) => openConfigRoute(String(key))}
+                  />
+                </div>
+              ) : null}
+            </Sider>
+
+            <Content style={{ padding: 0, overflow: 'hidden', display: 'flex' }}>
+              <div className="main-panel" style={{ height: '100%', padding: isConfigLikeRoute ? 16 : 20 }}>
           {showGridToolbar ? (
             <div className="view-meta-top-left">
               <div className="view-breadcrumb">{breadcrumbText}</div>
@@ -686,40 +732,41 @@ export function AppShell() {
               </div>
             </div>
           ) : null}
-          <Outlet />
-            </div>
-          </Content>
+            <Outlet />
+              </div>
+            </Content>
+          </Layout>
         </Layout>
-      </Layout>
 
-      <FilterModal
-        open={isFilterOpen}
-        onCancel={() => setIsFilterOpen(false)}
-        fields={fields}
-        viewConfig={viewConfig}
-        onUpdateViewConfig={updateViewConfig}
-      />
+        <FilterModal
+          open={isFilterOpen}
+          onCancel={() => setIsFilterOpen(false)}
+          fields={fields}
+          viewConfig={viewConfig}
+          onUpdateViewConfig={updateViewConfig}
+        />
 
-      <SortModal
-        open={isSortOpen}
-        onCancel={() => setIsSortOpen(false)}
-        fields={fields}
-        viewConfig={viewConfig}
-        onUpdateViewConfig={updateViewConfig}
-      />
+        <SortModal
+          open={isSortOpen}
+          onCancel={() => setIsSortOpen(false)}
+          fields={fields}
+          viewConfig={viewConfig}
+          onUpdateViewConfig={updateViewConfig}
+        />
 
-      <CreateRecordModal
-        open={isCreateRecordOpen}
-        onCancel={() => setIsCreateRecordOpen(false)}
-        tableId={tableId}
-        fields={fields}
-        viewConfig={viewConfig}
-        cascadeRules={cascadeRules}
-        tableReferenceMembers={tableReferenceMembers}
-        onCreateRecord={createRecord}
-      />
+        <CreateRecordModal
+          open={isCreateRecordOpen}
+          onCancel={() => setIsCreateRecordOpen(false)}
+          tableId={tableId}
+          fields={fields}
+          viewConfig={viewConfig}
+          cascadeRules={cascadeRules}
+          tableReferenceMembers={tableReferenceMembers}
+          onCreateRecord={createRecord}
+        />
 
-      {toast ? <div className="grid-toast">{toast}</div> : null}
-    </div>
+        {toast ? <div className="grid-toast">{toast}</div> : null}
+      </div>
+    </ConfigProvider>
   )
 }
