@@ -1,0 +1,24 @@
+# Python
+backend/.venv/
+backend/__pycache__/
+backend/app/__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Database
+*.db
+*.sqlite
+
+# Frontend
+app/node_modules/
+app/dist/
+
+# Environment
+.env.local
+.env.*.local
+.env
+
+# OS
+.DS_Store
+Thumbs.db
